@@ -14,18 +14,16 @@ def get_user(request):
     return request._cached_user
 
 
-def sso(request) :
+def sso(request):
 
     if settings.SECRET_KEY == None:
         logger.error("django_commento_sso - COMMENTO_SECRET_KEY not found in settings.py")
         return HttpResponse(status=204)
 
-
     if request.GET['token']:
         logger.debug("token as received %s" % request.GET['token'])
     else:
         return HttpResponse(status=204)
-
 
     if request.GET['hmac']:
         logger.debug("hmac as recevied %s" % request.GET['hmac'])
@@ -41,32 +39,22 @@ def sso(request) :
     print ("expected hmac was %s" % expectedHmacBytes.hex() )
 
     if expectedHmacBytes==receivedHmacBytes:
-
         logger.debug("HMAC comparison of token - match")
 
         if not request.user.is_authenticated:
-            #return redirect('%s?next=%s%s?hmac=%s&token=%s' % (settings.LOGIN_URL, request.get_host(), request.get_full_path(),request.GET['hmac'],request.GET['token']))
-            return redirect("{0}?next={1}{2}?hmac={3}&token={4}".format(settings.LOGIN_URL, request.get_host(), request.get_full_path(),request.GET['hmac'],request.GET['token']))
+            return redirect('%s?next=https://%s?hmac=%s&token=%s' % (settings.LOGIN_URL, request.get_full_path(), request.GET['hmac'], request.GET['token']))
         else:
             logger.info("django_commento_sso SSO Success for User %s" % request.user.username )
             payload = {
-                "token": request.GET['token'],
-            }
+			    "token": request.GET['token'],
+			}
             if not request.user.email:
                 logger.error('django_commento_sso User must have email for Commento SSO')
                 return False
             else:
                 payload['email']=request.user.email
 
-            # try:
-            #     uid = request.session['mid']
-            #     userobj = User.objects.get(id=uid)
-            # except User.DoesNotExist as e:
-              #     logger.error('Error, user does not exist', e)
-            #     return false
-            # #
-            # thisUser = User.objects.get(username=request.user.username).first()
-            # #avoid simplelazyobject
+
             payload['name']=settings.COMMENTO_USER_NAME_FUNCTION(get_user(request))
 
             if settings.COMMENTO_USER_LINK_FUNCTION:
